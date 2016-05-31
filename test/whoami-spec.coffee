@@ -9,7 +9,7 @@ async       = require 'async'
 describe 'whoami', ->
   beforeEach ->
     @jobManager = new JobManager
-      client: new RedisNS 'ns', redis.createClient()
+      client: new RedisNS 'ns', redis.createClient(dropBufferSupport: true)
       timeoutSeconds: 1
 
   beforeEach ->
