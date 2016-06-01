@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-worker-amqp",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Meshblu AMQP worker",
   "main": "command.js",
   "scripts": {
@@ -35,6 +35,6 @@
     "amqp10": "^3.1.4",
     "bluebird": "^3.3.5",
     "debug": "^2.2.0",
-    "meshblu-core-redis-pooled-job-manager": "^2.2.1"
+    "meshblu-core-redis-pooled-job-manager": "^2.3.0"
   }
 }
