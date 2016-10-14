@@ -21,7 +21,7 @@ before_script:
     sudo rabbitmqctl set_permissions some-uuid
     '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
 script:
-  - exit 0
+  - echo "No tests"
 after_script:
   - codeclimate-test-reporter < coverage/lcov.info
 deploy:
