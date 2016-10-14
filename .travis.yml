@@ -17,7 +17,7 @@ before_script:
   - >-
     sudo rabbitmqctl set_permissions some-uuid
     '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
-  - sudo service rabbitmq restart
+  - sudo service rabbitmq-server restart
 script:
   - npm test; npm test
 after_script:
