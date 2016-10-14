@@ -1,35 +1,41 @@
 sudo: required
 language: node_js
 node_js:
-- '5'
+  - '5'
 services:
-- redis
-- rabbitmq
+  - redis
+  - rabbitmq
 addons:
   code_climate:
     repo_token: 06a03f1f5a76807b5b26d3e34278f4fe340b3e056c78322f787d6761f181b540
 before_script:
-- npm install -g codeclimate-test-reporter
-- sudo rabbitmq-plugins enable rabbitmq_amqp1_0
-- sudo rabbitmqctl add_user meshblu judgementday
-- sudo rabbitmqctl set_permissions meshblu ".*" ".*" ".*"
-- sudo rabbitmqctl add_user some-uuid some-token
-- sudo rabbitmqctl set_permissions some-uuid '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
+  - npm install -g codeclimate-test-reporter
+  - sudo rabbitmq-plugins enable rabbitmq_amqp1_0
+  - sudo rabbitmqctl add_user meshblu judgementday
+  - sudo rabbitmqctl set_permissions meshblu ".*" ".*" ".*"
+  - sudo rabbitmqctl add_user some-uuid some-token
+  - >-
+    sudo rabbitmqctl set_permissions some-uuid
+    '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
 after_script:
-- codeclimate-test-reporter < coverage/lcov.info
+  - codeclimate-test-reporter < coverage/lcov.info
 deploy:
   provider: npm
   email: serveradmin@octoblu.com
   api_key:
-    secure: EpSYT34Yd7tsAmZO+c0fjCvEjFaTlLhX+IQG8+Rg/9+CjLhrkXRVG1vvQWNsbhBzyF9hvS5BT5G4dHjxjiXNZPmYQmnw6crVm+HCTyyxENcPijaZEfNgBBzj1FsaYVIWCvglF2eOYLWFenHdETB6VECuHwMonSttNb5WIkaY1p3HWe/Fd0mPIeAUVTurzyRxucocZioWOgsl+9xCHkY8uuEsBBmZwXz6atF8I1HEbGTT2qsJIMIISErFhh981vX+PzTPnFOj+/1aJvVi1YFMZzg9hNfl4C5FVt9K7aDoC/vmCGwsQbT+5mqgW8pHZhLRVzS3KOXq00Vri6aEpHaV0aFzd5GS+hxGU5VrlPV8AFVdS1/H1ZMlzGjWEx+25kfpsz6VqsgP+Mcidk8TyKwOOBgDvx1ic7L/bDWjv3xNxbeiH8oSl+XIV3cywsnq1l7IMEJRaGGk6SQCvWKP7Mbmlx9uB0MyNst0KLXklohWQOUoPcjwx4FtH/bL8x446l8aqQT+DEei26neNxU+oyxzPnR3Kzf9EzTvO+u7dkdte38Ttbx+hU3oQEQJpj9Cv4Xy90eOF2R8fmzYrslTTzTpHkeRE6md1ywm6d74+9/3+McPVU9FZEwnp4n6H2p4Yr7GGSWJbUUxmof6AQnI+fLHu23K/SYcWzBcuABOd4Krxr4=
-  on:
+    secure: >-
+      EpSYT34Yd7tsAmZO+c0fjCvEjFaTlLhX+IQG8+Rg/9+CjLhrkXRVG1vvQWNsbhBzyF9hvS5BT5G4dHjxjiXNZPmYQmnw6crVm+HCTyyxENcPijaZEfNgBBzj1FsaYVIWCvglF2eOYLWFenHdETB6VECuHwMonSttNb5WIkaY1p3HWe/Fd0mPIeAUVTurzyRxucocZioWOgsl+9xCHkY8uuEsBBmZwXz6atF8I1HEbGTT2qsJIMIISErFhh981vX+PzTPnFOj+/1aJvVi1YFMZzg9hNfl4C5FVt9K7aDoC/vmCGwsQbT+5mqgW8pHZhLRVzS3KOXq00Vri6aEpHaV0aFzd5GS+hxGU5VrlPV8AFVdS1/H1ZMlzGjWEx+25kfpsz6VqsgP+Mcidk8TyKwOOBgDvx1ic7L/bDWjv3xNxbeiH8oSl+XIV3cywsnq1l7IMEJRaGGk6SQCvWKP7Mbmlx9uB0MyNst0KLXklohWQOUoPcjwx4FtH/bL8x446l8aqQT+DEei26neNxU+oyxzPnR3Kzf9EzTvO+u7dkdte38Ttbx+hU3oQEQJpj9Cv4Xy90eOF2R8fmzYrslTTzTpHkeRE6md1ywm6d74+9/3+McPVU9FZEwnp4n6H2p4Yr7GGSWJbUUxmof6AQnI+fLHu23K/SYcWzBcuABOd4Krxr4=
+  'on':
     tags: true
     branches: true
 branches:
   only:
-  - "/^v[0-9]/"
+    - '/^v[0-9]/'
 after_success:
-- npm run coverage
-- npm run mocha:json
-- bash <(curl -s https://codecov.io/bash)
-- bash <(curl -s https://codecov.octoblu.com/bash)
+  - npm run coverage
+  - 'npm run mocha:json'
+  - 'bash <(curl -s https://codecov.io/bash)'
+  - 'bash <(curl -s https://codecov.octoblu.com/bash)'
+notifications:
+  webhooks:
+    - 'https://beekeeper.octoblu.com/webhooks/travis:ci'
