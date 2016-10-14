@@ -2,9 +2,6 @@ sudo: required
 language: node_js
 node_js:
   - '5'
-branches:
-  only:
-  - '/^v[0-9]/'
 services:
   - redis
   - rabbitmq
@@ -20,6 +17,7 @@ before_script:
   - >-
     sudo rabbitmqctl set_permissions some-uuid
     '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
+  - sleep 30
 after_script:
   - codeclimate-test-reporter < coverage/lcov.info
 deploy:
