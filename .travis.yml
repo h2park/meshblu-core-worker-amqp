@@ -20,7 +20,6 @@ before_script:
   - >-
     sudo rabbitmqctl set_permissions some-uuid
     '^(amq\.gen.*|amq\.default|^some-uuid.*)$' '.*' '.*'
-  - sudo service rabbitmq-server status
 after_script:
   - codeclimate-test-reporter < coverage/lcov.info
 deploy:
@@ -32,9 +31,6 @@ deploy:
   'on':
     tags: true
     branches: true
-branches:
-  only:
-    - '/^v[0-9]/'
 after_success:
   - npm run coverage
   - 'npm run mocha:json'
