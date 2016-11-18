@@ -1,12 +1,26 @@
-{Client}              = require 'amqp10'
-Promise               = require 'bluebird'
-debug                 = require('debug')('meshblu-core-worker-amqp:worker')
-RedisPooledJobManager = require 'meshblu-core-redis-pooled-job-manager'
+{ Client } = require 'amqp10'
+Promise    = require 'bluebird'
+debug      = require('debug')('meshblu-core-worker-amqp:worker')
+Redis      = require 'ioredis'
+RedisNS     = require '@octoblu/redis-ns'
+JobLogger  = require 'job-logger'
+{ JobManagerRequester } = require 'meshblu-core-job-manager'
 
 class Worker
   constructor: (options)->
-    {@jobTimeoutSeconds, @jobLogQueue, @jobLogRedisUri, @jobLogSampleRate} = options
-    {@amqpUri, @maxConnections, @redisUri, @namespace} = options
+    {
+      @jobTimeoutSeconds
+      @jobLogQueue
+      @jobLogRedisUri
+      @jobLogSampleRate
+      @amqpUri
+      @maxConnections
+      @cacheRedisUri
+      @redisUri
+      @namespace
+      @requestQueueName
+      @responseQueueName
+    } = options
 
   connect: (callback) =>
     options =
@@ -35,24 +49,42 @@ class Worker
     @connect (error) =>
       return callback error if error?
 
-      @jobManager = new RedisPooledJobManager {
-        jobLogIndexPrefix: 'metric:meshblu-core-worker-amqp'
-        jobLogType: 'meshblu-core-worker-amqp:request'
+      client = new RedisNS @namespace, new Redis @redisUri, dropBufferSupport: true
+      queueClient = new RedisNS @namespace, new Redis @redisUri, dropBufferSupport: true
+
+      jobLogger = new JobLogger
+        client: new Redis @jobLogRedisUri, dropBufferSupport: true
+        indexPrefix: 'metric:meshblu-core-protocol-adapter-amqp'
+        type: 'meshblu-core-protocol-adapter-amqp:request'
+        jobLogQueue: @jobLogQueue
+
+      @jobManager = new JobManagerRequester {
+        client
+        queueClient
         @jobTimeoutSeconds
-        @jobLogQueue
-        @jobLogRedisUri
         @jobLogSampleRate
-        @maxConnections
-        @redisUri
-        @namespace
+        @requestQueueName
+        @responseQueueName
+        queueTimeoutSeconds: @jobTimeoutSeconds
       }
+
+      @jobManager._do = @jobManager.do
+      @jobManager.do = (request, callback) =>
+        @jobManager._do request, (error, response) =>
+          jobLogger.log { error, request, response }, (jobLoggerError) =>
+            return callback jobLoggerError if jobLoggerError?
+            callback error, response
+
+      queueClient.on 'ready', =>
+        @jobManager.startProcessing()
 
       @receiver.on 'message', (message) =>
         debug 'message received:', message
         job = @_amqpToJobManager message
         debug 'job:', job
 
-        @jobManager.do 'request', 'response', job, (error, response) =>
+        @jobManager.do job, (error, response) =>
+          return if error?
           debug 'response received:', response
 
           options =
@@ -66,6 +98,7 @@ class Worker
           @sender.send response.rawData, options
 
   stop: (callback) =>
+    @jobManager?.stopProcessing()
     @client.disconnect()
       .then callback
       .catch callback

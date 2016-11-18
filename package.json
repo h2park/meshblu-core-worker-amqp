@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-worker-amqp",
-  "version": "1.2.10",
+  "version": "2.0.0",
   "description": "Meshblu AMQP worker",
   "main": "command.js",
   "scripts": {
@@ -26,19 +26,21 @@
     "coffee-script": "^1.10.0",
     "ioredis": "^2.0.0",
     "meshblu-amqp": "^1.0.0",
-    "meshblu-core-job-manager": "^3.2.2",
-    "mocha": "^2.4.5",
+    "mocha": "^3.1.2",
     "mocha-multi": "^0.9.1",
     "mocha-osx-reporter": "^0.1.2",
-    "nyc": "^8.3.0",
+    "nyc": "^9.0.1",
     "sinon": "^1.17.3",
     "sinon-chai": "^2.8.0"
   },
   "dependencies": {
-    "amqp10": "^3.1.4",
+    "amqp10": "^3.3.2",
     "bluebird": "^3.3.5",
-    "debug": "^2.2.0",
-    "meshblu-core-redis-pooled-job-manager": "^2.4.5"
+    "debug": "^2.3.2",
+    "ioredis": "^2.4.0",
+    "job-logger": "^4.3.1",
+    "meshblu-core-job-manager": "^8.0.3",
+    "uuid": "^3.0.0"
   },
   "nyc": {
     "cache": true,
@@ -50,5 +52,8 @@
     "extension": [
       ".coffee"
     ]
+  },
+  "optionalDependencies": {
+    "hiredis": "^0.5.0"
   }
 }
