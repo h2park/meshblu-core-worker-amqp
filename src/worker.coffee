@@ -49,9 +49,6 @@ class Worker
     @connect (error) =>
       return callback error if error?
 
-      client = new RedisNS @namespace, new Redis @redisUri, dropBufferSupport: true
-      queueClient = new RedisNS @namespace, new Redis @redisUri, dropBufferSupport: true
-
       jobLogger = new JobLogger
         client: new Redis @jobLogRedisUri, dropBufferSupport: true
         indexPrefix: 'metric:meshblu-core-protocol-adapter-amqp'
@@ -59,14 +56,18 @@ class Worker
         jobLogQueue: @jobLogQueue
 
       @jobManager = new JobManagerRequester {
-        client
-        queueClient
+        @namespace
+        @redisUri
+        maxConnections: 2
         @jobTimeoutSeconds
         @jobLogSampleRate
         @requestQueueName
         @responseQueueName
         queueTimeoutSeconds: @jobTimeoutSeconds
       }
+
+      @jobManager.once 'error', (error) =>
+        @panic 'fatal job manager error', 1, error
 
       @jobManager._do = @jobManager.do
       @jobManager.do = (request, callback) =>
@@ -75,33 +76,38 @@ class Worker
             return callback jobLoggerError if jobLoggerError?
             callback error, response
 
-      queueClient.on 'ready', =>
-        @jobManager.startProcessing()
+      @jobManager.start (error) =>
+        return callback error if error?
+        @receiver.on 'message', (message) =>
+          debug 'message received:', message
+          job = @_amqpToJobManager message
+          debug 'job:', job
 
-      @receiver.on 'message', (message) =>
-        debug 'message received:', message
-        job = @_amqpToJobManager message
-        debug 'job:', job
+          @jobManager.do job, (error, response) =>
+            return if error?
+            debug 'response received:', response
 
-        @jobManager.do job, (error, response) =>
-          return if error?
-          debug 'response received:', response
+            options =
+              properties:
+                correlationId: message.properties.correlationId
+                subject: message.properties.replyTo
+              applicationProperties:
+                code: response.code || 0
 
-          options =
-            properties:
-              correlationId: message.properties.correlationId
-              subject: message.properties.replyTo
-            applicationProperties:
-              code: response.code || 0
+            debug 'sender options', options
+            @sender.send response.rawData, options
 
-          debug 'sender options', options
-          @sender.send response.rawData, options
+  panic: (message, exitCode, error) =>
+    error ?= new Error('generic error')
+    console.error message
+    console.error error?.stack
+    process.exit exitCode
 
   stop: (callback) =>
-    @jobManager?.stopProcessing()
-    @client.disconnect()
-      .then callback
-      .catch callback
+    @jobManager.stop =>
+      @client.disconnect()
+        .then callback
+        .catch callback
 
   _amqpToJobManager: (message) =>
     job =

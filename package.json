@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-worker-amqp",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Meshblu AMQP worker",
   "main": "command.js",
   "scripts": {
@@ -40,7 +40,7 @@
     "debug": "^2.3.2",
     "ioredis": "^2.4.0",
     "job-logger": "^4.3.1",
-    "meshblu-core-job-manager": "^8.0.3",
+    "meshblu-core-job-manager": "^9.0.0",
     "uuid": "^3.0.0"
   },
   "nyc": {
