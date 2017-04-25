@@ -2,58 +2,76 @@ Worker      = require '../src/worker'
 MeshbluAmqp = require 'meshblu-amqp'
 RedisNS     = require '@octoblu/redis-ns'
 redis       = require 'ioredis'
-JobManager  = require 'meshblu-core-job-manager'
+{ JobManagerResponder } = require 'meshblu-core-job-manager'
 async       = require 'async'
+UUID        = require 'uuid'
 
 
 describe 'whoami', ->
-  beforeEach ->
-    @jobManager = new JobManager
-      client: new RedisNS 'ns', redis.createClient()
-      timeoutSeconds: 1
+  beforeEach 'constants', ->
+    queueId = UUID.v4()
+    @redisUri = 'redis://localhost:6379'
+    @namespace = 'ns'
+    @requestQueueName = "test:request:queue:#{queueId}"
+    @responseQueueName = "test:response:queue:#{queueId}"
 
-  beforeEach ->
-    @worker = new Worker
+  beforeEach 'new job manager', (done) ->
+    @workerFunc = sinon.stub()
+    @jobManager = new JobManagerResponder {
+      @redisUri
+      @namespace
+      maxConnections: 1
+      jobTimeoutSeconds: 1
+      queueTimeoutSeconds: 1
+      jobLogSampleRate: 0
+      @requestQueueName
+      @responseQueueName
+      @workerFunc
+    }
+
+    @jobManager.start done
+
+  beforeEach 'new worker', (done) ->
+    @worker = new Worker {
+      @redisUri
+      @requestQueueName
+      @responseQueueName
+      @namespace
       amqpUri: 'amqp://meshblu:judgementday@127.0.0.1'
       jobTimeoutSeconds: 1
       jobLogRedisUri: 'redis://localhost:6379'
       jobLogQueue: 'sample-rate:0.00'
       jobLogSampleRate: 0
       maxConnections: 10
-      redisUri: 'redis://localhost:6379'
-      namespace: 'ns'
+    }
 
-    @worker.run (error) =>
-      throw error if error?
+    @worker.run done
+    return # stupid promises
 
-  beforeEach (done) ->
+  afterEach (done) ->
+    @worker.stop done
+
+  afterEach (done) ->
+    @jobManager.stop done
+
+  beforeEach 'create client', (done) ->
     @client = new MeshbluAmqp uuid: 'some-uuid', token: 'some-token', hostname: 'localhost'
     @client.connect done
 
-  beforeEach (done) ->
+  beforeEach 'when whoami is called', (done) ->
+    response =
+      metadata:
+        code: 200
+      data: { whoami:'somebody' }
 
-    @asyncJobManagerGetRequest = (callback) =>
-      @jobManager.getRequest ['request'], (error, @jobManagerRequest) =>
-        return callback error if error?
-        return callback new Error('Request timeout') unless @jobManagerRequest?
+    @workerFunc.yields null, response
 
-        responseOptions =
-          metadata:
-            responseId: @jobManagerRequest.metadata.responseId
-          data: { whoami:'somebody' }
-          code: 200
+    @client.whoami (error, @data) => done(error)
 
-        @jobManager.createResponse 'response', responseOptions, callback
-
-    @asyncClientWhoAmi = (callback) =>
-      @client.whoami (error, @data) =>
-        callback(error)
-
-    async.parallel [ @asyncJobManagerGetRequest, @asyncClientWhoAmi ], =>
-      done()
-
-  it 'should create a @jobManagerRequest', ->
-    expect(@jobManagerRequest.metadata.jobType).to.deep.equal 'GetDevice'
+  it 'should create a GetDevice job', ->
+    expect(@workerFunc).to.have.been.called
+    request = @workerFunc.firstCall.args[0]
+    expect(request.metadata.jobType).to.deep.equal 'GetDevice'
 
   it 'should give us a device', ->
-    expect(@data).to.exist
+    expect(@data).to.deep.equal {whoami: 'somebody'}
