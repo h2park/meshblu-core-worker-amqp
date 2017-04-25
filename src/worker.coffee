@@ -1,18 +1,24 @@
-{Client}              = require 'amqp10'
-Promise               = require 'bluebird'
-debug                 = require('debug')('meshblu-core-worker-amqp:worker')
+{ Client } = require 'amqp10'
+Promise    = require 'bluebird'
+debug      = require('debug')('meshblu-core-worker-amqp:worker')
+Redis      = require 'ioredis'
+RedisNS     = require '@octoblu/redis-ns'
 colors                = require 'colors'
+JobLogger  = require 'job-logger'
 { JobManagerRequester } = require 'meshblu-core-job-manager'
 
 class Worker
   constructor: (options) ->
     {
       @amqpUri
+      @jobLogQueue
       @jobLogRedisUri
       @jobLogQueue
       @jobLogSampleRate
       @jobTimeoutSeconds
       @maxConnections
+      @cacheRedisUri
+      @redisUri
       @namespace
       @redisUri
       @requestQueueName
@@ -59,11 +65,17 @@ class Worker
     @connect (error) =>
       return callback error if error?
 
+      jobLogger = new JobLogger
+        client: new Redis @jobLogRedisUri, dropBufferSupport: true
+        indexPrefix: 'metric:meshblu-core-protocol-adapter-amqp'
+        type: 'meshblu-core-protocol-adapter-amqp:request'
+        jobLogQueue: @jobLogQueue
+
       @jobManager = new JobManagerRequester {
-        jobLogIndexPrefix: 'metric:meshblu-core-worker-amqp'
-        jobLogType: 'meshblu-core-worker-amqp:request'
-        @jobLogQueue
-        @jobLogRedisUri
+        @namespace
+        @redisUri
+        maxConnections: 2
+        @jobTimeoutSeconds
         @jobLogSampleRate
         @jobTimeoutSeconds
         @requestQueueName
@@ -76,6 +88,13 @@ class Worker
 
       @jobManager.once 'error', (error) =>
         @panic 'fatal job manager error', 1, error
+
+      @jobManager._do = @jobManager.do
+      @jobManager.do = (request, callback) =>
+        @jobManager._do request, (error, response) =>
+          jobLogger.log { error, request, response }, (jobLoggerError) =>
+            return callback jobLoggerError if jobLoggerError?
+            callback error, response
 
       @jobManager.start (error) =>
         return callback error if error?
@@ -98,6 +117,13 @@ class Worker
             debug 'sender options', options
             @sender.send response.rawData, options
         callback()
+
+  panic: (message, exitCode, error) =>
+    error ?= new Error('generic error')
+    console.error message
+    console.error error.stack
+    process.exit(exitCode ? 1)
+
 
   _emitError: ({error, message}) =>
     options =

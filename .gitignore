@@ -34,3 +34,4 @@ node_modules
 
 # dev
 .*-dev
+.nyc_output
