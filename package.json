@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-worker-amqp",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Meshblu AMQP worker",
   "main": "command.js",
   "scripts": {

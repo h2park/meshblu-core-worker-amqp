@@ -5,16 +5,17 @@ UUID   = require 'uuid'
 class Command
   constructor: ->
     @options =
-      amqpUri:                      process.env.AMQP_URI
-      cacheRedisUri        : process.env.CACHE_REDIS_URI
-      jobLogQueue:                  process.env.JOB_LOG_QUEUE
-      jobLogRedisUri:               process.env.JOB_LOG_REDIS_URI
-      jobLogSampleRate:             parseFloat(process.env.JOB_LOG_SAMPLE_RATE)
-      jobTimeoutSeconds:            parseInt(process.env.JOB_TIMEOUT_SECONDS || 30)
-      maxConnections:               parseInt(process.env.CONNECTION_POOL_MAX_CONNECTIONS || 100)
-      namespace:                    process.env.NAMESPACE || 'meshblu'
-      requestQueueName     : process.env.REQUEST_QUEUE_NAME
-      responseQueueBaseName: process.env.RESPONSE_QUEUE_BASE_NAME
+      amqpUri:                process.env.AMQP_URI
+      cacheRedisUri:          process.env.CACHE_REDIS_URI
+      jobLogQueue:            process.env.JOB_LOG_QUEUE
+      jobLogRedisUri:         process.env.JOB_LOG_REDIS_URI
+      jobLogSampleRate:       parseFloat(process.env.JOB_LOG_SAMPLE_RATE)
+      jobTimeoutSeconds:      parseInt(process.env.JOB_TIMEOUT_SECONDS || 30)
+      maxConnections:         parseInt(process.env.CONNECTION_POOL_MAX_CONNECTIONS || 100)
+      namespace:              process.env.NAMESPACE || 'meshblu'
+      requestQueueName     :  process.env.REQUEST_QUEUE_NAME
+      responseQueueBaseName:  process.env.RESPONSE_QUEUE_BASE_NAME
+      redisUri:               process.env.REDIS_URI
 
   panic: (error) =>
     console.error error.stack
