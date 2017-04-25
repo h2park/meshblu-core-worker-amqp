@@ -79,6 +79,7 @@ describe 'whoami', ->
     @workerFunc.yields null, response
 
     @client.whoami (error, @data) => done(error)
+    return # stupid promises
 
   it 'should create a GetDevice job', ->
     expect(@workerFunc).to.have.been.called
